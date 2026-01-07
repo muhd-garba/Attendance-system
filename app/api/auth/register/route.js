@@ -28,7 +28,9 @@ export async function POST(req) {
         // Only allow creating 'user' role by default unless admin logic is added later.
         // For this simple app, we might allow passing role for testing, or default to user.
         // But requirement says "two roles: user and admin". A simple way is to allow it in body for now.
-        const userRole = role === 'admin' ? 'admin' : 'user';
+        // Enforce 'user' role for all public registrations.
+        // Admin accounts must be seeded or created directly in DB.
+        const userRole = 'user';
 
         const user = await User.create({
             name,
