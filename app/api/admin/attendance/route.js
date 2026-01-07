@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/db';
 import Attendance from '@/models/Attendance';
+import User from '@/models/User'; // Ensure User model is loaded
 import { getSession } from '@/lib/session';
 import { NextResponse } from 'next/server';
 

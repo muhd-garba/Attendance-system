@@ -43,15 +43,49 @@ export default function DashboardPage() {
 
     const handleAction = async (action: 'signin' | 'signout' | 'update_standup', value?: boolean) => {
         try {
+            // New Location Handling Wrapper
+            if (action === 'signin' || action === 'signout') {
+                if (!navigator.geolocation) {
+                    alert('Geolocation is not supported by your browser');
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        submitAction(action, value, position.coords.latitude, position.coords.longitude);
+                    },
+                    (error) => {
+                        console.error(error);
+                        alert('Location access is required to sign in/out. Please enable location services.');
+                    }
+                );
+                return;
+            }
+
+            // For standup update, proceed without location
+            submitAction(action, value);
+
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const submitAction = async (action: string, value?: boolean, lat?: number, lon?: number) => {
+        try {
             const body: any = { action };
 
             if (action === 'signin') {
-                // Send the local checkbox state during sign in
                 body.standup = standupChecked;
             }
 
             if (action === 'update_standup') {
                 body.value = value;
+            }
+
+            // Add location if available
+            if (lat !== undefined && lon !== undefined) {
+                body.latitude = lat;
+                body.longitude = lon;
             }
 
             const res = await fetch('/api/attendance', {
@@ -61,6 +95,7 @@ export default function DashboardPage() {
             });
             if (res.ok) {
                 fetchStatus();
+                if (action !== 'update_standup') alert(action === 'signin' ? 'Signed in successfully' : 'Signed out successfully');
             } else {
                 const errorData = await res.json();
                 alert(errorData.message);
@@ -68,7 +103,7 @@ export default function DashboardPage() {
         } catch (error) {
             console.error(error);
         }
-    };
+    }
 
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const checked = e.target.checked;

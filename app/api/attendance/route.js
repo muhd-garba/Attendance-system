@@ -1,3 +1,4 @@
+import { getDistanceFromLatLonInMeters } from '@/lib/haversine';
 import dbConnect from '@/lib/db';
 import Attendance from '@/models/Attendance';
 import { getSession } from '@/lib/session';
@@ -55,7 +56,37 @@ export async function POST(req) {
 
         const body = await req.json();
         console.log('API Request Body:', body); // Debug log
-        const { action, value } = body;
+        const { action, value, latitude, longitude } = body;
+
+        // Location Validation Logic
+        if (action === 'signin' || action === 'signout') {
+            const OFFICE_LAT = parseFloat(process.env.OFFICE_LATITUDE || '0');
+            const OFFICE_LON = parseFloat(process.env.OFFICE_LONGITUDE || '0');
+            const MAX_RADIUS = parseFloat(process.env.OFFICE_RADIUS_METERS || '100');
+
+            console.log(`[GEO_DEBUG] Env Office: ${OFFICE_LAT}, ${OFFICE_LON}, Radius: ${MAX_RADIUS}`);
+            console.log(`[GEO_DEBUG] User Location: ${latitude}, ${longitude}`);
+
+            if (latitude === undefined || longitude === undefined) {
+                return NextResponse.json({ message: 'Location permission required.' }, { status: 400 });
+            }
+
+            if (OFFICE_LAT !== 0 || OFFICE_LON !== 0) {
+                const distance = getDistanceFromLatLonInMeters(latitude, longitude, OFFICE_LAT, OFFICE_LON);
+                console.log(`[GEO_DEBUG] Calculated Distance: ${distance}m`);
+
+                if (distance > MAX_RADIUS) {
+                    console.log('[GEO_DEBUG] Rejected: Too far');
+                    return NextResponse.json({
+                        message: `Validation Error: You are too far from the office. Distance: ${Math.round(distance)}m. Allowed: ${MAX_RADIUS}m.`
+                    }, { status: 400 });
+                } else {
+                    console.log('[GEO_DEBUG] Accepted: Within radius');
+                }
+            } else {
+                console.log('[GEO_DEBUG] Validation Skipped: Office coordinates are 0,0');
+            }
+        }
 
         await dbConnect();
 
